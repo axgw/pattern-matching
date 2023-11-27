@@ -1,4 +1,4 @@
-class Match:
+class Match():
     def __init__(self, rest):
         self.rest = rest if rest is not None else Null()
 
@@ -8,6 +8,7 @@ class Match:
 
 
 class Null(Match):
+    # noinspection PyMissingConstructor
     def __init__(self):
         self.rest = None
 
@@ -17,29 +18,25 @@ class Null(Match):
 
 class Lit(Match):
     def __init__(self, chars, rest=None):
-        self.chars = chars
         super().__init__(rest)
+        self.chars = chars
 
-    def _match(self, text, start=0):
+    def _match(self, text, start):
         end = start + len(self.chars)
         if text[start:end] != self.chars:
-            return False
-        if self.rest:
-            return self.rest.match(text, end)
-        return end == len(text)
+            return None
+        return self.rest._match(text, end)
 
 
 class Any(Match):
     def __init__(self, rest=None):
         super().__init__(rest)
 
-    def _match(self, text, start=0):
-        if self.rest is None:
-            return True
-        for i in range(start, len(text)):
-            if self.rest.match(text, i):
-                return True
-        return False
+    def _match(self, text, start):
+        for i in range(start, len(text) + 1):
+            if i == len(text):
+                return i
+        return None
 
 
 class Either(Match):
@@ -49,4 +46,10 @@ class Either(Match):
         super().__init__(rest)
 
     def _match(self, text, start=0):
-        return self.left.match(text, start) or self.right.match(text, start)
+        for i in [self.left, self.right]:
+            end = i._match(text, start)
+            if end is not None:
+                end = self.rest._match(text, end)
+                if end == len(text):
+                    return end
+        return None
